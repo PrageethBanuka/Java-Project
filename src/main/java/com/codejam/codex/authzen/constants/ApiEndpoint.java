@@ -30,5 +30,4 @@ public class ApiEndpoint {
     public static final String ADMIN_AUDIT_LOGS = "/audit-logs";
     public static final String ADMIN_ROLES = "/roles";
     public static final String ADMIN_DELEGATE = "/delegate";
-
 }

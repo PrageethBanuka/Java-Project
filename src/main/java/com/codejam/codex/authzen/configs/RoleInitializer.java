@@ -13,8 +13,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.sql.Timestamp;
-import java.util.List;
+import java.time.Instant;
+import java.util.Optional;
 
 @Configuration
 @RequiredArgsConstructor
@@ -25,48 +25,57 @@ public class RoleInitializer {
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${admin.email}")
+    @Value("${admin.email:admin@example.com}")
     private String adminEmail;
 
-    @Value("${admin.username}")
+    @Value("${admin.username:admin}")
     private String adminUsername;
 
-    @Value("${admin.password}")
+    @Value("${admin.password:Admin123!}")
     private String adminPassword;
 
     @Bean
     CommandLineRunner initializeRolesAndAdmin() {
         return args -> {
-            Role userRole = createRoleIfNotExists("ROLE_USER", "Default user role");
-            Role adminRole = createRoleIfNotExists("ROLE_ADMIN", "Administrator with full access");
+            try {
+                // Validate admin properties
+                if (adminEmail.isBlank() || adminUsername.isBlank() || adminPassword.isBlank()) {
+                    throw new IllegalStateException("Admin email, username, or password is missing or empty");
+                }
 
-            createAdminUserIfNotExists(adminRole);
+                Role userRole = createOrGetRole("ROLE_USER", "Default user role");
+                Role adminRole = createOrGetRole("ROLE_ADMIN", "Administrator with full access");
+
+                createAdminUserIfNotExists(adminRole);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to initialize roles and admin: " + e.getMessage(), e);
+            }
         };
     }
 
-    private Role createRoleIfNotExists(String name, String description) {
-        List<Role> roles = roleRepository.findByName(name);
-
-        if (roles.isEmpty()) {
-            Role newRole = Role.builder()
-                    .name(name)
-                    .description(description)
-                    .build();
-            return roleRepository.save(newRole);
+    private Role createOrGetRole(String name, String description) {
+        Optional<Role> existingRole = roleRepository.findByName(name).stream().findFirst();
+        if (existingRole.isPresent()) {
+            return existingRole.get();
         }
 
-        return roles.get(0);
+        Role newRole = Role.builder()
+                .name(name)
+                .description(description)
+                .build();
+        return roleRepository.save(newRole);
     }
 
     private void createAdminUserIfNotExists(Role adminRole) {
-        if (userRepository.findByEmail(adminEmail).isEmpty()) {
+        Optional<User> existingUser = userRepository.findByEmail(adminEmail);
+        if (existingUser.isEmpty()) {
             User admin = User.builder()
                     .username(adminUsername)
                     .email(adminEmail)
                     .password(passwordEncoder.encode(adminPassword))
                     .isActive(true)
                     .isLocked(false)
-                    .createdAt(new Timestamp(System.currentTimeMillis()))
+                    .createdAt(Timestamp.from(Instant.now()))
                     .build();
 
             User savedAdmin = userRepository.save(admin);

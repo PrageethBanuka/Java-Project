@@ -1,8 +1,17 @@
 package com.codejam.codex.authzen.constants;
 
-public class AppConstant {
+public enum AppConstant {
+    USER("user"),
+    AUTH("auth"),
+    ADMIN("admin");
 
-    public static final String USER = "user";
-    public static final String AUTH = "auth";
-    public static final String ADMIN = "admin";
+    private final String value;
+
+    AppConstant(String value) {
+        this.value = value;
+    }
+
+    public String getValue() {
+        return value;
+    }
 }

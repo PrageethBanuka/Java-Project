@@ -16,26 +16,33 @@ public class HealthController {
 
     @GetMapping(ApiEndpoint.HEALTH)
     public ResponseEntity<AuthzenResponse<Map<String, Object>>> checkHealth() {
-        Map<String, Object> healthStatus = new HashMap<>();
+        try {
+            Map<String, Object> healthStatus = new HashMap<>();
+            healthStatus.put("status", "UP");
+            healthStatus.put("application", "AuthZen API");
+            healthStatus.put("version", "1.0.0");
+            healthStatus.put("timestamp", Instant.now().toString());
+            healthStatus.put("uptime", getUptime());
 
-        healthStatus.put("status", "UP");
-        healthStatus.put("application", "AuthZen API");
-        healthStatus.put("version", "1.0.0");
-        healthStatus.put("timestamp", Instant.now().toString());
-        healthStatus.put("uptime", getUptime());
-
-        AuthzenResponse<Map<String, Object>> response = new AuthzenResponse<>(healthStatus);
-        response.setMessage("Health check successful");
-
-        return ResponseEntity.ok(response);
+            AuthzenResponse<Map<String, Object>> response = new AuthzenResponse<>(healthStatus);
+            response.setMessage("Health check successful");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorStatus = new HashMap<>();
+            errorStatus.put("status", "DOWN");
+            errorStatus.put("timestamp", Instant.now().toString());
+            AuthzenResponse<Map<String, Object>> response = new AuthzenResponse<>(errorStatus, false, "Health check failed: " + e.getMessage());
+            return ResponseEntity.status(503).body(response);
+        }
     }
 
     private String getUptime() {
         long uptimeMillis = ManagementFactory.getRuntimeMXBean().getUptime();
         long seconds = uptimeMillis / 1000 % 60;
         long minutes = uptimeMillis / (1000 * 60) % 60;
-        long hours = uptimeMillis / (1000 * 60 * 60);
+        long hours = uptimeMillis / (1000 * 60 * 60) % 24;
+        long days = uptimeMillis / (1000 * 60 * 60 * 24);
 
-        return String.format("%02dh:%02dm:%02ds", hours, minutes, seconds);
+        return String.format("%dd %02dh:%02dm:%02ds", days, hours, minutes, seconds);
     }
 }
